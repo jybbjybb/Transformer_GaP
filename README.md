@@ -27,7 +27,9 @@ docker build . -t your.repository:transformer
 
 If you already have preprocessed data, go to the next step.
 
-Otherwise, download and process the data by go into the docker image
+Otherwise, follow https://github.com/NVIDIA/DeepLearningExamples/tree/master/PyTorch/Translation/Transformer to download the data.
+
+Download and process the data by go into the docker image
 ```
 nvidia-docker run -it --rm --ipc=host your.repository:transformer bash
 ```
