@@ -35,24 +35,24 @@ If you already have data downloaded, but it has not yet been preprocessed, use:
 ```bash
 nvidia-docker run -it --rm --ipc=host -v <path to your unprocessed data>:/workspace/translation/examples/translation/orig your.repository:transformer bash
 ```
-3. Download and preprocess dataset: Download and preprocess the WMT14 English-German dataset.
+Download and preprocess dataset: Download and preprocess the WMT14 English-German dataset.
 
 ```bash 
 scripts/run_preprocessing.sh
 ```
 After running this command, data will be downloaded to `/workspace/translation/examples/translation/orig` directory and this data will be processed and put into `/data/wmt14_en_de_joined_dict` directory. 
 
-4. Restart the docker 
+3. Restart the docker 
 ```
 bash scripts/start_docker.sh 
 ```
 
-5. Start the GaP
+4. Start the GaP
 ```
 python scripts/run_seq_gap.py --ep-per-step 2 --num-steps 3 --extra-cmd='--no-epoch-checkpoints' --extra-cmd-step0='--no-epoch-checkpoints' --global-workspace results/tmp/ --sparsity 0.8 --config-folder profiles/3_step_forward_gap/0.8_std_naming/ --num-parts 3 --partition-type cyclic
 ```
 
-6. Test the results
+5. Test the results
 ```
 bash scripts/run_test.sh <your saved checkpoints>
 ```
