@@ -57,3 +57,18 @@ python scripts/run_seq_gap.py --ep-per-step 2 --num-steps 3 --extra-cmd='--no-ep
 bash scripts/run_test.sh <your saved checkpoints>
 ```
 
+# Argument explanation
+```
+--ep-per-step: type=int, epochs to train per grow-and-prune step
+--num-steps: type=int, number of steps of the GaP
+--extra-cmd: type=str, extra cmd, such as --no-epoch-checkpoints to append to the training cmd.
+--extra-cmd-step0: type=str, extra cmd, such as --no-epoch-checkpoints to append to the first step of training cmd.
+--sparsity-type: type=str, sparsity type, use "irregular" throughout this paper.
+--global-workspace:, type=str, working directory
+--sparsity: type=float, sparsity when use global sparse distribution (not used if sparsity yaml files are assigned)
+--config-folder: type=str, this folder contains yaml file of GaP in this folder, named as step_0.yaml, step_1.yaml, ...
+--num-parts: type=int, number of partitions
+--partition-type: type=str, cyclic or random partition. Use cyclic for better results
+--precision:, type=str, "amp" to turn on mixed fp16, use " " to use fp32
+```
+
