@@ -104,7 +104,7 @@ def main(args):
         max_tokens=args.max_tokens,
         max_sentences=args.max_sentences_valid,
         max_positions=args.max_positions,
-        ignore_invalid_inputs=True,
+        #ignore_invalid_inputs=True,
         required_batch_size_multiple=8,
         seed=args.seed,
         num_shards=args.distributed_world_size,
@@ -162,10 +162,11 @@ def main(args):
                    'speed': 0,
                    'accuracy': 0}
 
-    prune_init(args, trainer.model)
-    prune_apply_masks()
     prune_print_sparsity(trainer.model)
-
+    prune_init(args, trainer.model)
+    #prune_apply_masks()
+    prune_print_sparsity(trainer.model)
+    exit()
     for name, W in model.named_parameters():
         np.set_printoptions(linewidth=np.nan, threshold=np.inf)
         if 'encoder.layers.0.self_attn.in_proj_weight_q' in name:
@@ -315,7 +316,7 @@ def validate(args, trainer, datasets, subsets):
             max_tokens=args.max_tokens,
             max_sentences=args.max_sentences_valid,
             max_positions=args.max_positions,
-            ignore_invalid_inputs=args.skip_invalid_size_inputs_valid_test,
+            #ignore_invalid_inputs=args.skip_invalid_size_inputs_valid_test,
             required_batch_size_multiple=8,
             seed=args.seed,
             num_shards=args.distributed_world_size,
@@ -353,7 +354,7 @@ def score(args, trainer, dataset, src_dict, tgt_dict, ref_file):
         max_tokens=None,
         max_sentences=max(8,min(math.ceil(1024/args.distributed_world_size),128)),
         max_positions=args.max_positions,
-        ignore_invalid_inputs=args.skip_invalid_size_inputs_valid_test,
+        #ignore_invalid_inputs=args.skip_invalid_size_inputs_valid_test,
         required_batch_size_multiple=8,
         num_shards=args.distributed_world_size,
         shard_id=args.distributed_rank,

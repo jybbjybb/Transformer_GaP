@@ -58,7 +58,7 @@ python ${DISTRIBUTED} /workspace/translation/train.py \
   --arch transformer_wmt_en_de_big_t2t \
   --share-all-embeddings \
   --optimizer adam \
-  --adam-betas '(0.9, 0.997)' \
+  --adam-betas 0.9 0.997 \
   --adam-eps "1e-9" \
   --clip-norm 0.0 \
   --lr-scheduler inverse_sqrt \

@@ -182,6 +182,7 @@ class ADMM(PruneBase):
                 cuda_pruned_weights = self.prune_weight(name, W, prune_ratio, first)  # get sparse model in cuda
                 first = False
 
+
             elif option == "random":
                 _, cuda_pruned_weights = random_pruning(self.args, W, prune_ratio)
 
@@ -351,7 +352,6 @@ class ADMM(PruneBase):
                 return weight.to(weight.device).type(weight.dtype)
             else:
                 _, res = weight_pruning(self.args, self.configs, name, weight, prune_ratio)
-
 
         return res.to(weight.device).type(weight.dtype)
 
@@ -805,7 +805,7 @@ def four_two_pruning(args, weight, pattern='hvb', percent=0.5):
 
 
 
-def block_pruning(args, weight, percent, return_block_sums=False):
+def block_pruning(args, weight, percent, return_block_sums=False, block_size=None):
     print("using block pruning...")
     shape = weight.shape
     weight2d = copy.copy(weight)
@@ -831,14 +831,27 @@ def block_pruning(args, weight, percent, return_block_sums=False):
 
 
     assert len(weight2d.shape) == 2, "Now only support 2d matrices"
-
-    block = args.sp_admm_block
+    if block_size is None: #No override on block size, use args passed in
+        block = args.sp_admm_block
+    else: # Use explicit block size if needed
+        block = block_size
     block = eval(block)
+    block = list(block)
+
+    #print(block)
+    if block[0] < 1.0:
+        block[0] = int(weight2d.shape[0] * block[0])
+    if block[1] < 1.0:
+        block[1] = int(weight2d.shape[1] * block[1])
+    #print(block)
+    #input("?")
+
     row_pad_num = (block[0] - weight2d.shape[0] % block[0]) % block[0]
     col_pad_num = (block[1] - weight2d.shape[1] % block[1]) % block[1]
     new_weight2d = np.zeros((weight2d.shape[0]+row_pad_num, weight2d.shape[1]+col_pad_num))
     new_weight2d[:weight2d.shape[0], :weight2d.shape[1]] = weight2d
     new_weight2d = np.sqrt(new_weight2d * new_weight2d)
+
 
     if block[0] == -1:
         block_l = list(block)
@@ -1040,6 +1053,90 @@ def weight_pruning(args, configs, name, w, prune_ratio, mask_fixed_params=None):
         weight = weight.reshape(shape)
         above_threshold = above_threshold.reshape(shape)
         return torch.from_numpy(above_threshold).cuda(), torch.from_numpy(weight).cuda()
+
+    elif (args.sp_admm_sparsity_type == "block_fraction_in_non_diagonal"):
+        print("using block_in_non_diagonal pruning...")
+        shape = weight.shape
+        weight2d = copy.copy(weight)
+
+        block = args.sp_admm_block
+        # args.sp_admm_block has the form (1, x) or (y, 1)
+        # x, and y indicate how many Big Blocks in the matrix (#nodes)
+        # each block sparse pattern is then (1, #col/x) or (#row/y, 1)
+        # But diagonal blocks are not prune
+        block = eval(block)
+        block = list(block)
+
+        if len(shape) == 2:
+            # assume it is MN format
+            pass
+        elif len(shape) == 4:
+            # assume it is CoCIKhKw format
+            # first serialize KhKw to one dimension
+            co, ci, kh, kw = weight2d.shape
+            weight2d = weight2d.reshape([co, ci, kh * kw])
+            # convert from CoCiKhKw to CoKhKwCi format
+            # weight2d = np.moveaxis(weight2d, 1, -1) # No need for this step because we need to have the 3x3 kernal as consecutive indices in weight2d
+            # merge Ci, Kh, Kw dimension
+            weight2d = weight2d.reshape([co, ci * kh * kw])
+        elif len(shape) == 3:
+            co, ci, kl = weight2d.shape
+            #weight2d = np.moveaxis(weight2d, 1, -1)
+            weight2d = weight2d.reshape([co, ci * kl])
+        else:
+            assert False, "{} matrix dim = {}, not equal to 2 (MM), 3 (1d Conv), or 4 (2d Conv)!".format(name, len(shape))
+
+        num_nodes = max(block[0], block[1])
+
+        assert weight2d.shape[0] % block[0] == 0, 'Row number {} not divisible by {}'.format(weight2d.shape[0], block[0])
+        assert weight2d.shape[1] % block[1] == 0, 'Column number {} not divisible by {}'.format(weight2d.shape[1], block[1])
+
+        unit_rec = np.ones((weight2d.shape[0]//num_nodes, weight2d.shape[1]//num_nodes))
+        diag_mask = np.kron(np.eye(num_nodes,dtype=int),unit_rec) # repeat num_nodes times
+
+        max_v = np.max(np.abs(weight2d))
+        weight2d += (2 * np.random.randint(2,size=weight2d.shape)-1)*0.0001
+
+        weight2d +=  diag_mask*max_v # make sure the diagonal is large
+
+        if block[0] > 1: # prune vertical block pattern, #nodes = #rows/block[0]
+            block[0] = weight2d.shape[0]//block[0]
+        elif block[1] > 1:
+            block[1] = weight2d.shape[1]//block[1]
+
+        # For conv2D, 4D weight only
+        if len(shape) == 4:
+            block[1] = shape[2] * shape[3]
+
+        b_size='({},{})'.format(block[0],block[1])
+
+        mask2d, masked_w =  block_pruning(args, weight2d, percent, block_size=b_size)
+
+
+        masked_w -= diag_mask*max_v
+
+        #print(masked_w)
+        #np.savetxt("foo.csv", np.abs(masked_w), delimiter=" ")
+        #input("?")
+
+        # Back to 4D tensor if needed
+        if len(shape) == 2:
+            pass
+        elif len(shape) == 4:
+            # assume it is CoCIKhKw format
+            co, ci, kh, kw = weight.shape
+            masked_w = masked_w.reshape([co, ci, kh, kw])
+        elif len(shape) == 3:
+            co, ci, kl = weight.shape
+            masked_w = masked_w.reshape([co, ci, kl])
+
+
+        #assert weight.shape == mask2d.shape, "Mask shape not equal to weights shape!"
+        mask2d = masked_w > 0.0
+
+
+        return torch.from_numpy(mask2d), torch.from_numpy(masked_w)
+
 
     elif args.sp_admm_sparsity_type == "hybrid_block":
         print("using hybrid block pruning...")

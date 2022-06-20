@@ -140,7 +140,7 @@ def tokenize_en(line):
     line = re.sub(r'\]', r'&#93;', line)
 
     #ensure final line breaks
-    if line[-1] is not '\n':
+    if line[-1] !='\n':
         line += '\n'
 
     return line
@@ -217,7 +217,7 @@ class Tokenizer:
         if append_eos:
             ids[nwords] = dict.eos_index
         return ids
-    
+
     @staticmethod
     def detokenize(line, lang):
         #don't try to detokenize XML/HTML tag lines
@@ -295,6 +295,6 @@ class Tokenizer:
         line = re.sub(r' $', '', line)
 
         #add trailing break
-        line += '\n' if line[-1] is not '\n' else ''
+        line += '\n' if line[-1] != '\n' else ''
 
         return line
