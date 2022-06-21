@@ -21,9 +21,10 @@ SPARSITY_TYPE=${5:-"irregular"} #or 4:2-H-V-balanced or irregular or block
 CONFIG_FILE=${6:-"/home/profiles/all_layer_0.9.yaml"}
 PRUNE_ARGS=${7:-"--sp-admm-select-number 2 --sp-admm-pattern-row-sub 1 --sp-admm-pattern-col-sub 4"} #--sp-global-weight-sparsity 0.9 --sp-prune-threshold 0.2 --no-epoch-checkpoints
 PREC=${8:-"amp"}
+EXTRA_ARGS=${9:-"--no-epoch-checkpoints"}
 
 mkdir -p ${SAVE_FOLDER}
-bash scripts/run_DGX1_AMP_8GPU.sh ${PREC} 1 ${LR} 4000 ${EP} 5120 8 ${SAVE_FOLDER} transformer_wmt_en_de_big_t2t "--resume ${LOAD_CKPT} --sp-retrain --sp-prune-before-retrain --sp-admm-sparsity-type ${SPARSITY_TYPE} --sp-config-file ${CONFIG_FILE} --restart-training ${PRUNE_ARGS}" 2>&1 | tee ${SAVE_FOLDER}/log.txt
+bash scripts/run_DGX1_AMP_8GPU.sh ${PREC} 1 ${LR} 4000 ${EP} 5120 8 ${SAVE_FOLDER} transformer_wmt_en_de_big_t2t "--resume ${LOAD_CKPT} --sp-retrain --sp-prune-before-retrain --sp-admm-sparsity-type ${SPARSITY_TYPE} --sp-config-file ${CONFIG_FILE} --restart-training ${PRUNE_ARGS} ${EXTRA_ARGS}" 2>&1 | tee ${SAVE_FOLDER}/log.txt
 
 # for M:N use
 # SPARSITY_TYPE=${3:-'N:M-prune-pattern'} #irregular

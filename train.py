@@ -166,7 +166,6 @@ def main(args):
     prune_init(args, trainer.model)
     #prune_apply_masks()
     prune_print_sparsity(trainer.model)
-    exit()
     for name, W in model.named_parameters():
         np.set_printoptions(linewidth=np.nan, threshold=np.inf)
         if 'encoder.layers.0.self_attn.in_proj_weight_q' in name:
